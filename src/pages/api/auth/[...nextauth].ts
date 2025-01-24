@@ -10,7 +10,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (credentials?.password === "Lambipirn11") {
+        if (credentials?.password === "YOUR_PASSWORD") {
           return { id: "1", name: "Admin" };
         }
         return null;
