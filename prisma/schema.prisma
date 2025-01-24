@@ -1,0 +1,56 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Participant {
+  id            String          @id @default(uuid())
+  name          String
+  createdAt     DateTime        @default(now()) @map("created_at")
+  availableDates AvailableDate[]
+  allowedVoter   AllowedVoter   @relation(fields: [name], references: [name])
+
+  @@map("participants")
+}
+
+model AvailableDate {
+  id            String      @id @default(uuid())
+  participantId String      @map("participant_id")
+  date          DateTime    @db.Date
+  createdAt     DateTime    @default(now()) @map("created_at")
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@map("available_dates")
+}
+
+model AllowedVoter {
+  name      String        @id
+  hasVoted  Boolean       @default(false) @map("has_voted")
+  votedAt   DateTime?     @map("voted_at")
+  participants Participant[]
+
+  @@map("allowed_voters")
+}
+
+model Admin {
+  name String @id
+
+  @@map("admins")
+}
+
+model SiteConfig {
+  id         Int      @id @default(1)
+  headerText String   @map("header_text")
+
+  @@map("site_config")
+}
