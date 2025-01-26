@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   format,
   startOfMonth,
@@ -23,9 +23,14 @@ interface ResultsCalendarProps {
     _count: { date: number };
     voters: string[];
   }[];
+  showOnTouch?: boolean;
 }
 
-export function ResultsCalendar({ month, dateCounts }: ResultsCalendarProps) {
+export function ResultsCalendar({
+  month,
+  dateCounts,
+  showOnTouch,
+}: ResultsCalendarProps) {
   const start = startOfMonth(month);
   const end = endOfMonth(month);
   const days = eachDayOfInterval({ start, end });
@@ -70,6 +75,14 @@ export function ResultsCalendar({ month, dateCounts }: ResultsCalendarProps) {
     };
   };
 
+  const [openTooltip, setOpenTooltip] = useState<string | null>(null);
+
+  const handleTouch = (dateString: string) => {
+    if (showOnTouch && window.matchMedia("(hover: none)").matches) {
+      setOpenTooltip(openTooltip === dateString ? null : dateString);
+    }
+  };
+
   return (
     <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
       <div className="flex items-center justify-between mb-4">
@@ -112,43 +125,57 @@ export function ResultsCalendar({ month, dateCounts }: ResultsCalendarProps) {
           const count = getDateCount(day);
           const overlayColor = getOverlayColor(count);
           const { available, unavailable } = getVotersForDay(day);
+          const dateString = format(day, "yyyy-MM-dd");
 
           return (
-            <TooltipProvider key={day.toString()}>
-              <Tooltip delayDuration={50}>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`
-                      relative aspect-square flex items-center justify-center
-                      ${
-                        !isSameMonth(day, month)
-                          ? "text-gray-700"
-                          : "text-gray-300"
-                      }
-                      ${count > 0 ? "bg-gray-700/50 rounded-lg" : ""}
-                    `}
-                  >
-                    {count > 0 && (
-                      <div
-                        className={`absolute inset-0 rounded-lg ${overlayColor} transition-colors duration-200`}
-                        style={{ opacity: count > 0 ? 0.5 : 0 }}
-                      />
-                    )}
-                    <span
-                      className={`relative z-10 text-sm ${
-                        count === maxCount && count > 0
-                          ? "text-yellow-300 font-bold"
-                          : ""
-                      } ${count > 0 ? "font-medium" : ""}`}
+            <TooltipProvider key={dateString}>
+              <Tooltip
+                open={
+                  window.matchMedia("(hover: none)").matches && showOnTouch
+                    ? openTooltip === dateString
+                    : undefined
+                }
+                delayDuration={100}
+              >
+                <TooltipTrigger
+                  asChild
+                  onClick={() => handleTouch(dateString)}
+                  onMouseLeave={() => setOpenTooltip(null)}
+                >
+                  <button className="w-full h-full">
+                    <div
+                      className={`
+                        relative aspect-square flex items-center justify-center
+                        ${
+                          !isSameMonth(day, month)
+                            ? "text-gray-700"
+                            : "text-gray-300"
+                        }
+                        ${count > 0 ? "bg-gray-700/50 rounded-lg" : ""}
+                      `}
                     >
-                      {format(day, "d")}
                       {count > 0 && (
-                        <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-xs text-gray-400">
-                          {count}
-                        </span>
+                        <div
+                          className={`absolute inset-0 rounded-lg ${overlayColor} transition-colors duration-200`}
+                          style={{ opacity: count > 0 ? 0.5 : 0 }}
+                        />
                       )}
-                    </span>
-                  </div>
+                      <span
+                        className={`relative z-10 text-sm ${
+                          count === maxCount && count > 0
+                            ? "text-yellow-300 font-bold"
+                            : ""
+                        } ${count > 0 ? "font-medium" : ""}`}
+                      >
+                        {format(day, "d")}
+                        {count > 0 && (
+                          <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-xs text-gray-400">
+                            {count}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" align="center">
                   <div className="p-2">

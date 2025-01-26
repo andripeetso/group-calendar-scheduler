@@ -156,6 +156,7 @@ export default function Results() {
                     key={month.toString()}
                     month={month}
                     dateCounts={dateData}
+                    showOnTouch={true}
                   />
                 ))}
               </div>

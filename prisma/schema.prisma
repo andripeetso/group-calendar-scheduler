@@ -6,11 +6,13 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["metrics"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Participant {
@@ -53,4 +55,12 @@ model SiteConfig {
   headerText String   @map("header_text")
 
   @@map("site_config")
+}
+
+model VotingPeriod {
+  id        Int      @id @default(1)
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+
+  @@map("voting_period")
 }

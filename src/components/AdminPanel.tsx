@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import {
   TrashIcon,
@@ -36,14 +36,10 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
   const [voters, setVoters] = useState<string[]>([]);
   const [newVoter, setNewVoter] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [startMonth, setStartMonth] = useState<string>("");
+  const [endMonth, setEndMonth] = useState<string>("");
 
-  useEffect(() => {
-    fetchVotes();
-    fetchHeaderText();
-    fetchVoters();
-  }, []);
-
-  const fetchVotes = async () => {
+  const fetchVotes = useCallback(async () => {
     const response = await fetch("/api/admin/votes");
     const data = await response.json();
 
@@ -58,9 +54,9 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
         dates: participant.availableDates.map((d) => d.date),
       }))
     );
-  };
+  }, []);
 
-  const fetchHeaderText = async () => {
+  const fetchHeaderText = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/header");
       const data = await response.json();
@@ -73,9 +69,9 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
     } catch {
       showMessage("Viga päise teksti laadimisel", "error");
     }
-  };
+  }, []);
 
-  const fetchVoters = async () => {
+  const fetchVoters = useCallback(async () => {
     const response = await fetch("/api/admin/voters");
     const data = await response.json();
 
@@ -85,7 +81,29 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
     }
 
     setVoters(data.map((v: Voter) => v.name));
-  };
+  }, []);
+
+  const fetchVotingPeriod = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/voting-period");
+      const data = await response.json();
+
+      if (response.ok && data.startDate && data.endDate) {
+        setStartMonth(new Date(data.startDate).toISOString().slice(0, 7));
+        setEndMonth(new Date(data.endDate).toISOString().slice(0, 7));
+      }
+    } catch (error) {
+      console.error("Voting period fetch error:", error);
+      showMessage("Viga hääletusperioodi laadimisel", "error");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchVotes();
+    fetchHeaderText();
+    fetchVoters();
+    fetchVotingPeriod();
+  }, [fetchVotes, fetchHeaderText, fetchVoters, fetchVotingPeriod]);
 
   const handleSaveHeaderText = async () => {
     const response = await fetch("/api/admin/header", {
@@ -177,6 +195,42 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
     }
   };
 
+  const handleSaveVotingPeriod = async () => {
+    const response = await fetch("/api/admin/voting-period", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        startDate: new Date(`${startMonth}-01T12:00:00Z`).toISOString(),
+        endDate: new Date(`${endMonth}-01T12:00:00Z`).toISOString(),
+      }),
+    });
+
+    if (!response.ok) {
+      showMessage("Viga hääletusperioodi salvestamisel", "error");
+    } else {
+      showMessage("Hääletusperiood salvestatud", "success");
+      onRefresh();
+    }
+  };
+
+  const getMonthOptions = () => {
+    const options = [];
+    const currentDate = new Date();
+    // Allow selecting up to 24 months in the future
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + i,
+        1
+      );
+      options.push({
+        value: date.toISOString().slice(0, 7), // YYYY-MM format
+        label: format(date, "MMMM yyyy"),
+      });
+    }
+    return options;
+  };
+
   const showMessage = (text: string, type: string) => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "" }), 3000);
@@ -228,6 +282,55 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
                 <DiscIcon className="w-5 h-5" />
               </button>
             </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-300">
+              Hääletusperiood
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm text-gray-400">Alguskuu</label>
+                <select
+                  value={startMonth}
+                  onChange={(e) => setStartMonth(e.target.value)}
+                  className="w-full bg-gray-800 text-gray-300 rounded-lg px-4 py-2 border border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                >
+                  <option value="">Vali kuu</option>
+                  {getMonthOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-gray-400">Lõppkuu</label>
+                <select
+                  value={endMonth}
+                  onChange={(e) => setEndMonth(e.target.value)}
+                  className="w-full bg-gray-800 text-gray-300 rounded-lg px-4 py-2 border border-gray-700 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                >
+                  <option value="">Vali kuu</option>
+                  {getMonthOptions()
+                    .filter(
+                      (option) => option.value >= startMonth || !startMonth
+                    )
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={handleSaveVotingPeriod}
+              disabled={!startMonth || !endMonth || startMonth > endMonth}
+              className="bg-yellow-500 text-gray-900 px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Salvesta periood
+            </button>
           </div>
 
           <div className="space-y-4">

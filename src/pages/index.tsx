@@ -9,9 +9,11 @@ import {
   PlayIcon,
 } from "@radix-ui/react-icons";
 import { useEffect, useState, useCallback } from "react";
-import { addMonths, startOfMonth, format } from "date-fns";
+import { addMonths, startOfMonth, format, differenceInMonths } from "date-fns";
 import { useRouter } from "next/router";
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { ArrowRightIcon } from "@radix-ui/react-icons";
 
 interface VoterData {
   name: string;
@@ -37,6 +39,10 @@ export default function Home() {
   const [dateData, setDateData] = useState<
     { date: string; _count: { date: number }; voters: string[] }[]
   >([]);
+  const [votingPeriod, setVotingPeriod] = useState<{
+    startDate: Date;
+    endDate: Date;
+  } | null>(null);
 
   const handleReset = useCallback(async (resetTarget: string) => {
     try {
@@ -104,9 +110,16 @@ export default function Home() {
     }
   }, []);
 
-  const months = Array.from({ length: 6 }, (_, i) =>
-    startOfMonth(addMonths(new Date(), i))
-  );
+  const months = votingPeriod
+    ? Array.from(
+        {
+          length:
+            differenceInMonths(votingPeriod.endDate, votingPeriod.startDate) +
+            1,
+        },
+        (_, i) => startOfMonth(addMonths(votingPeriod.startDate, i))
+      )
+    : [];
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -141,6 +154,15 @@ export default function Home() {
           setHeaderText(headerData.text || "Vali sobivad kuupäevad");
         } else {
           setHeaderText("Vali sobivad kuupäevad");
+        }
+
+        const votingPeriodResponse = await fetch("/api/admin/voting-period");
+        if (votingPeriodResponse.ok) {
+          const periodData = await votingPeriodResponse.json();
+          setVotingPeriod({
+            startDate: new Date(periodData.startDate),
+            endDate: new Date(periodData.endDate),
+          });
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -269,7 +291,16 @@ export default function Home() {
             <PlayIcon className="w-8 h-8" />
             HUNTIDE LÄNNILEIDJA
           </h1>
-          <p className="text-gray-400 mb-8 font-medium">{headerText}</p>
+          <div className="flex justify-between items-center mb-8">
+            <p className="text-gray-400 font-medium">{headerText}</p>
+            <Link
+              href="/results"
+              className="text-yellow-500 hover:text-yellow-400 transition-colors flex items-center gap-2"
+            >
+              Vaata tulemusi
+              <ArrowRightIcon className="w-4 h-4" />
+            </Link>
+          </div>
 
           {!showResults ? (
             <form onSubmit={handleSubmit} className="space-y-8">
