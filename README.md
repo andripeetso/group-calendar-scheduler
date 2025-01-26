@@ -1,17 +1,8 @@
-Created cause needed to schedule
+Find a suitable date with a group of friends.
 
-Not really optimized, but works
-
-1. do "npm i"
-
-2. create .env file 
-  DATABASE_URL=""
-  NEXTAUTH_SECRET=""
-  NEXTAUTH_URL=""
-
-3. admin panel pass inside [...nextauth].ts
-
-4. change calendar months inside Calendar.tsx & ResultsCalendar.tsx (havent added voting date ranges to admin panel)
-
-5. Deploy on vercel or whereever
-
+.env.local
+NEXTAUTH_SECRET="<random seed>"
+NEXTAUTH_URL="<localhost or hosted url>"
+DATABASE_URL="<get from supabase>"
+DIRECT_URL="<get from supabase>"
+        
