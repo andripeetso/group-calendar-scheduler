@@ -114,10 +114,12 @@ export default function Home() {
     ? Array.from(
         {
           length:
-            differenceInMonths(votingPeriod.endDate, votingPeriod.startDate) +
-            1,
+            differenceInMonths(
+              new Date(votingPeriod.endDate),
+              new Date(votingPeriod.startDate)
+            ) + 1,
         },
-        (_, i) => startOfMonth(addMonths(votingPeriod.startDate, i))
+        (_, i) => startOfMonth(addMonths(new Date(votingPeriod.startDate), i))
       )
     : [];
 

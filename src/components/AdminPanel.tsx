@@ -11,6 +11,7 @@ import {
   DiscIcon,
 } from "@radix-ui/react-icons";
 import Link from "next/link";
+import { et } from "date-fns/locale";
 
 interface Participant {
   name: string;
@@ -89,8 +90,18 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
       const data = await response.json();
 
       if (response.ok && data.startDate && data.endDate) {
-        setStartMonth(new Date(data.startDate).toISOString().slice(0, 7));
-        setEndMonth(new Date(data.endDate).toISOString().slice(0, 7));
+        const start = new Date(data.startDate);
+        const end = new Date(data.endDate);
+
+        setStartMonth(
+          `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(
+            2,
+            "0"
+          )}`
+        );
+        setEndMonth(
+          `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}`
+        );
       }
     } catch (error) {
       console.error("Voting period fetch error:", error);
@@ -196,12 +207,32 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
   };
 
   const handleSaveVotingPeriod = async () => {
+    // Create dates in UTC to avoid timezone issues
+    const startParts = startMonth.split("-");
+    const endParts = endMonth.split("-");
+
+    const start = new Date(
+      parseInt(startParts[0]), // year
+      parseInt(startParts[1]) - 1, // month (0-based)
+      1, // day
+      12, // hour
+      0 // minute
+    );
+
+    const end = new Date(
+      parseInt(endParts[0]), // year
+      parseInt(endParts[1]) - 1, // month (0-based)
+      1, // day
+      23, // hour
+      59 // minute
+    );
+
     const response = await fetch("/api/admin/voting-period", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        startDate: new Date(`${startMonth}-01T12:00:00Z`).toISOString(),
-        endDate: new Date(`${endMonth}-01T12:00:00Z`).toISOString(),
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
       }),
     });
 
@@ -216,7 +247,6 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
   const getMonthOptions = () => {
     const options = [];
     const currentDate = new Date();
-    // Allow selecting up to 24 months in the future
     for (let i = 0; i < 12; i++) {
       const date = new Date(
         currentDate.getFullYear(),
@@ -224,8 +254,11 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
         1
       );
       options.push({
-        value: date.toISOString().slice(0, 7), // YYYY-MM format
-        label: format(date, "MMMM yyyy"),
+        value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}`, // YYYY-MM format
+        label: format(date, "MMMM yyyy", { locale: et }), // Add Estonian locale
       });
     }
     return options;
